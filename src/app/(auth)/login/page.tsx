@@ -28,7 +28,7 @@ export default function LoginPage() {
         <h1 className="text-2xl font-semibold">Login</h1>
         <p className="mt-1 text-sm text-muted">Secure Authentication</p>
         <form className="mt-6 space-y-3" onSubmit={onSubmit}>
-          <Input placeholder="Email" type="email" onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          <Input placeholder="Email" type="text" onChange={(e) => setForm({ ...form, email: e.target.value })} />
           <Input
             placeholder="Password"
             type="password"
