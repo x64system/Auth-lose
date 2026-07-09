@@ -8,12 +8,12 @@ async function main() {
   await prisma.product.deleteMany();
   await prisma.user.deleteMany();
 
-  const adminPass = await argon2.hash("Admin@123456", { type: argon2.argon2id });
+  const adminPass = await argon2.hash("code", { type: argon2.argon2id });
 
   const admin = await prisma.user.create({
     data: {
       name: "Administrator",
-      email: "admin@injectbypass.io",
+      email: "lose",
       passwordHash: adminPass,
       role: "ADMIN",
       verifiedAt: new Date()
