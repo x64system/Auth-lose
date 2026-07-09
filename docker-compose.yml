@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: inject_bypass
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api:
+    build: ./apps/api
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/inject_bypass?schema=public
+      JWT_SECRET: change_me_to_a_long_secret
+      APP_URL: http://localhost:3000
+    ports:
+      - "4000:4000"
+
+  web:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - api
+      - db
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/inject_bypass?schema=public
+      JWT_SECRET: change_me_to_a_long_secret
+      APP_URL: http://localhost:3000
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
