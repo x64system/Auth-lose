@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as argon2 from 'argon2';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -18,7 +18,7 @@ export class AuthService {
       throw new ConflictException('Email already in use');
     }
 
-    const passwordHash = await argon2.hash(dto.password, { type: argon2.argon2id });
+    const passwordHash = await bcrypt.hash(dto.password, 12);
 
     const user = await this.prisma.user.create({
       data: {
@@ -45,7 +45,7 @@ export class AuthService {
       throw new ForbiddenException('User banned');
     }
 
-    const valid = await argon2.verify(user.passwordHash, dto.password);
+    const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) {
       throw new UnauthorizedException('Invalid credentials');
     }

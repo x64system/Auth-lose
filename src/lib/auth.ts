@@ -1,4 +1,4 @@
-import argon2 from "argon2";
+import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
@@ -12,11 +12,11 @@ export type SessionPayload = {
 };
 
 export async function hashPassword(password: string) {
-  return argon2.hash(password, { type: argon2.argon2id });
+  return bcrypt.hash(password, 12);
 }
 
 export async function verifyPassword(password: string, hash: string) {
-  return argon2.verify(hash, password);
+  return bcrypt.compare(password, hash);
 }
 
 export async function createSessionToken(payload: SessionPayload) {
