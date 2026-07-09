@@ -1,15 +1,17 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import argon2 from "argon2";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const adminPass = await bcrypt.hash("Admin@123456", 12);
+  await prisma.license.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.user.deleteMany();
 
-  const admin = await prisma.user.upsert({
-    where: { email: "admin@injectbypass.io" },
-    update: {},
-    create: {
+  const adminPass = await argon2.hash("Admin@123456", { type: argon2.argon2id });
+
+  const admin = await prisma.user.create({
+    data: {
       name: "Administrator",
       email: "admin@injectbypass.io",
       passwordHash: adminPass,
