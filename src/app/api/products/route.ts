@@ -9,7 +9,7 @@ export async function GET(req: Request) {
   const category = searchParams.get("category") ?? undefined;
   const products = await db.product.findMany({
     where: {
-      ...(query ? { OR: [{ name: { contains: query } }, { description: { contains: query } }] } : {}),
+      ...(query ? { OR: [{ name: { contains: query, mode: "insensitive" } }, { description: { contains: query, mode: "insensitive" } }] } : {}),
       ...(status ? { status } : {}),
       ...(category ? { category } : {})
     },

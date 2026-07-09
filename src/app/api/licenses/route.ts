@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   const productId = searchParams.get("productId") ?? undefined;
   const licenses = await db.license.findMany({
     where: {
-      ...(query ? { code: { contains: query } } : {}),
+      ...(query ? { code: { contains: query, mode: "insensitive" } } : {}),
       ...(status ? { status } : {}),
       ...(productId ? { productId } : {})
     },
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
       type: parsed.data.type,
       userId: parsed.data.userId,
       device: parsed.data.device,
-      usageHistory: parsed.data.notes ?? undefined,
+      usageHistory: parsed.data.notes ? { notes: parsed.data.notes } : undefined,
       status: "INACTIVE",
       expiresAt: expiresAtFromType(parsed.data.type)
     }

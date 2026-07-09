@@ -7,7 +7,7 @@ export async function GET(req: Request) {
   const status = searchParams.get("status");
   const users = await db.user.findMany({
     where: {
-      ...(query ? { OR: [{ name: { contains: query } }, { email: { contains: query } }] } : {}),
+      ...(query ? { OR: [{ name: { contains: query, mode: "insensitive" } }, { email: { contains: query, mode: "insensitive" } }] } : {}),
       ...(status === "banned" ? { isBanned: true } : {}),
       ...(status === "active" ? { isBanned: false } : {})
     },

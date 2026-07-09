@@ -1,8 +1,6 @@
 import { IsString, IsEnum, IsBoolean, IsOptional } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
-
-const RoleNames = ["SUPER_ADMIN", "ADMIN", "MODERATOR", "SUPPORT", "DEVELOPER", "CUSTOMER", "USER"] as const;
-type RoleName = (typeof RoleNames)[number];
+import { RoleName } from "@prisma/client";
 
 export class UpdateUserDto {
   @ApiProperty({ required: false })
@@ -10,8 +8,8 @@ export class UpdateUserDto {
   @IsOptional()
   name?: string;
 
-  @ApiProperty({ enum: RoleNames, required: false })
-  @IsEnum(RoleNames)
+  @ApiProperty({ enum: RoleName, required: false })
+  @IsEnum(RoleName)
   @IsOptional()
   role?: RoleName;
 
