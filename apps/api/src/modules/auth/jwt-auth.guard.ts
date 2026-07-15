@@ -1,10 +1,15 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { Request } from "express";
+import { resolveJwtSecret } from "../../common/jwt-secret";
+import { PrismaService } from "../../prisma/prisma.service";
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private jwtService: JwtService) {}
+  constructor(
+    private jwtService: JwtService,
+    private prisma: PrismaService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -13,8 +18,19 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException("Token de autenticação não encontrado");
     }
     try {
-      const secret = process.env.JWT_SECRET || "inject-bypass-secret";
+      const secret = resolveJwtSecret();
       const payload = await this.jwtService.verifyAsync(token, { secret });
+
+      // BUG FIX: Validar que a sessão existe no banco de dados e não expirou.
+      // Antes, só verificávamos a assinatura do JWT, permitindo tokens revogados.
+      const session = await this.prisma.session.findUnique({
+        where: { token },
+      });
+
+      if (!session || session.expiresAt < new Date()) {
+        throw new UnauthorizedException("Sessão inválida ou expirada");
+      }
+
       (request as any)["user"] = payload;
     } catch (err) {
       throw new UnauthorizedException("Token inválido ou expirado");

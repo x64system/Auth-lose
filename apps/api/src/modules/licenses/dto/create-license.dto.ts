@@ -20,4 +20,9 @@ export class CreateLicenseDto {
   @IsString()
   @IsOptional()
   device?: string;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  code?: string;
 }

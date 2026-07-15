@@ -1,20 +1,21 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: ["class"],
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        bg: "#0B0B0B",
-        card: "#151515",
-        hover: "#202020",
-        border: "#2A2A2A",
-        foreground: "#FFFFFF",
-        muted: "#B5B5B5",
-        light: "#E5E5E5",
-        success: "#3DDC84",
-        danger: "#FF4D4D",
-        warning: "#FFC857"
+        bg: "rgb(var(--color-bg) / <alpha-value>)",
+        card: "rgb(var(--color-card) / <alpha-value>)",
+        hover: "rgb(var(--color-hover) / <alpha-value>)",
+        border: "rgb(var(--color-border) / <alpha-value>)",
+        foreground: "rgb(var(--color-foreground) / <alpha-value>)",
+        muted: "rgb(var(--color-muted) / <alpha-value>)",
+        light: "rgb(var(--color-light) / <alpha-value>)",
+        success: "rgb(var(--color-success) / <alpha-value>)",
+        danger: "rgb(var(--color-danger) / <alpha-value>)",
+        warning: "rgb(var(--color-warning) / <alpha-value>)"
       },
       borderRadius: {
         xl: "1rem",

@@ -1,8 +1,9 @@
-import { Controller, Get, Put, Delete, Body, Param, UseGuards } from "@nestjs/common";
+import { Controller, Get, Put, Delete, Body, Param, Req, UseGuards, ForbiddenException } from "@nestjs/common";
+import { Request } from "express";
 import { UsersService } from "./users.service";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
-import { RolesGuard } from "../auth/roles.guard";
+import { RolesGuard, getRoleLevel } from "../auth/roles.guard";
 import { Roles } from "../auth/roles.decorator";
 import { ApiTags, ApiBearerAuth, ApiOperation } from "@nestjs/swagger";
 
@@ -29,11 +30,31 @@ export class UsersController {
     return this.usersService.findOne(id);
   }
 
-  /** Apenas ADMIN e SUPER_ADMIN podem alterar dados */
+  /**
+   * Apenas ADMIN e SUPER_ADMIN podem alterar dados.
+   *
+   * Proteção extra contra escalada de privilégios: ninguém pode atribuir
+   * um cargo superior ao seu próprio, nem editar alguém com cargo já
+   * superior ao seu.
+   */
   @Roles("ADMIN", "SUPER_ADMIN")
   @Put(":id")
   @ApiOperation({ summary: "Update a user profile or settings" })
-  update(@Param("id") id: string, @Body() dto: UpdateUserDto) {
+  async update(@Param("id") id: string, @Body() dto: UpdateUserDto, @Req() req: Request) {
+    const caller = (req as any).user as { role: string };
+    const callerLevel = getRoleLevel(caller.role);
+
+    if (dto.role && getRoleLevel(dto.role) > callerLevel) {
+      throw new ForbiddenException(
+        `Não pode atribuir um cargo (${dto.role}) superior ao seu próprio (${caller.role})`
+      );
+    }
+
+    const target = await this.usersService.findOne(id);
+    if (getRoleLevel(target.role) > callerLevel) {
+      throw new ForbiddenException("Não pode editar um utilizador com cargo superior ao seu");
+    }
+
     return this.usersService.update(id, dto);
   }
 
@@ -41,7 +62,11 @@ export class UsersController {
   @Roles("SUPER_ADMIN")
   @Delete(":id")
   @ApiOperation({ summary: "Delete a user" })
-  remove(@Param("id") id: string) {
+  async remove(@Param("id") id: string, @Req() req: Request) {
+    const caller = (req as any).user as { sub: string };
+    if (caller.sub === id) {
+      throw new ForbiddenException("Não pode eliminar a sua própria conta");
+    }
     return this.usersService.remove(id);
   }
 }

@@ -12,12 +12,26 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from "@nestjs/swagger";
 export class LicensesController {
   constructor(private readonly licensesService: LicensesService) {}
 
+  /** Endereço público para validação de licenças no site (login.html) */
+  @Post("validate")
+  @ApiOperation({ summary: "Validate a license key from site login" })
+  validateLicense(@Body() body: { key?: string; code?: string; device?: string }) {
+    return this.licensesService.validateLicense(body);
+  }
+
+  /** Apenas staff (SUPPORT+) pode listar licenças — contém dados de clientes */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SUPPORT", "DEVELOPER", "MODERATOR", "ADMIN", "SUPER_ADMIN")
+  @ApiBearerAuth()
   @Get()
   @ApiOperation({ summary: "List all license keys" })
   findAll() {
     return this.licensesService.findAll();
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SUPPORT", "DEVELOPER", "MODERATOR", "ADMIN", "SUPER_ADMIN")
+  @ApiBearerAuth()
   @Get(":id")
   @ApiOperation({ summary: "Get details of a single license key" })
   findOne(@Param("id") id: string) {

@@ -37,7 +37,17 @@ export class AuthService {
   }
 
   async login(dto: LoginDto, ip?: string) {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isBanned: true,
+        passwordHash: true,
+      },
+    });
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -80,10 +90,20 @@ export class AuthService {
       throw new ForbiddenException('Account suspended');
     }
 
+    // BUG FIX: Não atualizar todas as sessões com o mesmo token - isso causa
+    // reutilização de token entre dispositivos. Em vez disso, invalidar todas
+    // as sessões antigas e criar uma nova.
+    await this.prisma.session.deleteMany({
+      where: { userId },
+    });
+
     const token = await this.generateToken(user);
-    await this.prisma.session.updateMany({
-      where: { userId, expiresAt: { gt: new Date() } },
-      data: { token },
+    await this.prisma.session.create({
+      data: {
+        token,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
     });
 
     return { token, role: user.role };

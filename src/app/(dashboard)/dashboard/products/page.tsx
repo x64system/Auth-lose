@@ -1,57 +1,107 @@
 "use client";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { Pencil, Trash2 } from "lucide-react";
 import { Sidebar } from "@/components/sidebar";
 import { Topbar } from "@/components/dashboard/topbar";
 import { Button, Input } from "@/components/ui";
 import { Modal } from "@/components/modal";
+import { DataTable, type Column } from "@/components/data-table";
+import { apiFetch, ApiError } from "@/lib/http-client";
+import { useConfirm } from "@/components/confirm-dialog";
+
+type Product = {
+  id: string;
+  name: string;
+  description: string;
+  version: string;
+  category: string;
+  status: string;
+  price: number | string | null;
+};
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<any[]>([]);
+  const confirm = useConfirm();
+  const [products, setProducts] = useState<Product[]>([]);
   const [name, setName] = useState("");
   const [q, setQ] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
 
   // Edit Modal State
-  const [editingProduct, setEditingProduct] = useState<any | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editVersion, setEditVersion] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const [editStatus, setEditStatus] = useState("");
   const [editPrice, setEditPrice] = useState<number | string>("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const initialQ = new URLSearchParams(window.location.search).get("q");
+    if (initialQ) setQ(initialQ);
+  }, []);
 
   async function load() {
-    const res = await fetch(`/api/products${q ? `?q=${encodeURIComponent(q)}` : ""}`);
-    setProducts(await res.json());
+    setLoading(true);
+    try {
+      const data = await apiFetch<Product[]>(`/api/products${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+      setProducts(data);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Erro ao carregar produtos");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
 
   async function createProduct() {
     if (!name.trim()) return;
-    await fetch("/api/products", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name,
-        description: "Produto premium",
-        version: "1.0.0",
-        category: "General",
-        status: "active"
-      })
+    setCreating(true);
+    try {
+      await apiFetch("/api/products", {
+        method: "POST",
+        body: JSON.stringify({
+          name,
+          description: "Produto premium",
+          version: "1.0.0",
+          category: "General",
+          status: "active"
+        })
+      });
+      toast.success(`Produto "${name}" criado`);
+      setName("");
+      load();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Erro ao criar produto");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function removeProduct(product: Product) {
+    const ok = await confirm({
+      title: "Eliminar produto",
+      description: `Tem a certeza que deseja eliminar "${product.name}"? Esta ação não pode ser desfeita.`,
+      confirmLabel: "Eliminar",
+      danger: true
     });
-    setName("");
-    load();
+    if (!ok) return;
+    try {
+      await apiFetch(`/api/products/${product.id}`, { method: "DELETE" });
+      toast.success(`Produto "${product.name}" eliminado`);
+      load();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Erro ao excluir produto");
+    }
   }
 
-  async function removeProduct(id: string) {
-    if (!confirm("Tem certeza que deseja excluir este produto?")) return;
-    await fetch(`/api/products/${id}`, { method: "DELETE" });
-    load();
-  }
-
-  function startEdit(product: any) {
+  function startEdit(product: Product) {
     setEditingProduct(product);
     setEditName(product.name || "");
     setEditDescription(product.description || "Produto premium");
@@ -63,21 +113,52 @@ export default function ProductsPage() {
 
   async function saveEdit() {
     if (!editingProduct) return;
-    await fetch(`/api/products/${editingProduct.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: editName,
-        description: editDescription,
-        version: editVersion,
-        category: editCategory,
-        status: editStatus,
-        price: editPrice ? Number(editPrice) : null
-      })
-    });
-    setEditingProduct(null);
-    load();
+    setSaving(true);
+    try {
+      await apiFetch(`/api/products/${editingProduct.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          name: editName,
+          description: editDescription,
+          version: editVersion,
+          category: editCategory,
+          status: editStatus,
+          price: editPrice ? Number(editPrice) : undefined
+        })
+      });
+      toast.success("Produto atualizado");
+      setEditingProduct(null);
+      load();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Erro ao guardar produto");
+    } finally {
+      setSaving(false);
+    }
   }
+
+  const columns: Column<Product>[] = [
+    { key: "name", header: "Nome", sortable: true, sortValue: (p) => p.name.toLowerCase(), render: (p) => <span className="font-medium">{p.name}</span> },
+    { key: "version", header: "Versão", sortable: true, sortValue: (p) => p.version, render: (p) => <span className="text-muted">{p.version}</span> },
+    { key: "category", header: "Categoria", sortable: true, sortValue: (p) => p.category, render: (p) => <span className="text-muted">{p.category}</span> },
+    {
+      key: "status",
+      header: "Estado",
+      sortable: true,
+      sortValue: (p) => p.status,
+      render: (p) => (
+        <span className={`rounded-full border px-2 py-0.5 text-xs ${p.status === "active" ? "text-success border-success/40" : "text-muted border-border"}`}>
+          {p.status}
+        </span>
+      )
+    },
+    {
+      key: "price",
+      header: "Preço",
+      sortable: true,
+      sortValue: (p) => (p.price ? Number(p.price) : 0),
+      render: (p) => <span className="text-muted">{p.price ? `$${Number(p.price).toFixed(2)}` : "—"}</span>
+    }
+  ];
 
   return (
     <main className="page-shell grid gap-6 lg:grid-cols-[260px_1fr]">
@@ -85,29 +166,34 @@ export default function ProductsPage() {
       <section>
         <Topbar />
         <div className="card glass p-6">
-          <h1 className="text-2xl font-semibold">Gestão de Produtos</h1>
-          <div className="mt-4 flex gap-2">
-            <Input placeholder="Pesquisar" value={q} onChange={(e) => setQ(e.target.value)} />
-            <Input placeholder="Novo produto" value={name} onChange={(e) => setName(e.target.value)} />
-            <Button onClick={createProduct}>Criar</Button>
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+            <h1 className="text-2xl font-bold tracking-tight">Gestão de Produtos</h1>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Input placeholder="Pesquisar..." value={q} onChange={(e) => setQ(e.target.value)} className="w-full sm:w-44 bg-card/80 border-border" />
+              <Input placeholder="Nome do novo produto..." value={name} onChange={(e) => setName(e.target.value)} className="w-full sm:w-52 bg-card/80 border-border" />
+              <Button onClick={createProduct} disabled={creating} className="whitespace-nowrap px-5">
+                {creating ? "A criar..." : "+ Criar Produto"}
+              </Button>
+            </div>
           </div>
-          <div className="mt-4 space-y-2">
-            {products.map((p) => (
-              <div key={p.id} className="flex items-center justify-between rounded-xl border border-border bg-card p-3">
-                <div>
-                  <p className="font-medium">{p.name}</p>
-                  <p className="text-xs text-muted">{p.version} • {p.status}</p>
+          <div className="mt-4">
+            <DataTable
+              columns={columns}
+              data={products}
+              loading={loading}
+              rowKey={(p) => p.id}
+              emptyMessage="Nenhum produto encontrado."
+              actions={(p) => (
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => startEdit(p)} className="rounded-lg border border-border p-1.5 text-muted transition hover:bg-hover hover:text-foreground" title="Editar">
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={() => removeProduct(p)} className="rounded-lg border border-danger/40 p-1.5 text-danger transition hover:bg-danger/10" title="Excluir">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-                <div className="flex gap-2">
-                  <Button className="bg-card text-foreground" onClick={() => startEdit(p)}>
-                    Editar
-                  </Button>
-                  <Button className="bg-danger text-white" onClick={() => removeProduct(p.id)}>
-                    Excluir
-                  </Button>
-                </div>
-              </div>
-            ))}
+              )}
+            />
           </div>
         </div>
       </section>
@@ -122,8 +208,8 @@ export default function ProductsPage() {
             <Button className="bg-card text-foreground" onClick={() => setEditingProduct(null)}>
               Cancelar
             </Button>
-            <Button className="bg-success text-black" onClick={saveEdit}>
-              Salvar
+            <Button className="bg-success text-black" onClick={saveEdit} disabled={saving}>
+              {saving ? "A guardar..." : "Salvar"}
             </Button>
           </>
         }
@@ -161,6 +247,7 @@ export default function ProductsPage() {
               >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
+                <option value="beta">Beta</option>
               </select>
             </div>
           </div>

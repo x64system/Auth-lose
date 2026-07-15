@@ -1,12 +1,11 @@
-import { IsString, IsEnum, IsOptional, IsDateString } from "class-validator";
+import { IsString, IsOptional, IsDateString, IsIn } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
-import { LicenseStatus } from "@prisma/client";
 
 export class UpdateLicenseDto {
-  @ApiProperty({ enum: LicenseStatus, required: false })
-  @IsEnum(LicenseStatus)
+  @ApiProperty({ enum: ["ACTIVE", "INACTIVE", "EXPIRED", "REVOKED"], required: false })
+  @IsIn(["ACTIVE", "INACTIVE", "EXPIRED", "REVOKED"])
   @IsOptional()
-  status?: LicenseStatus;
+  status?: string;
 
   @ApiProperty({ required: false })
   @IsDateString()

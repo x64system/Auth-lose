@@ -6,9 +6,15 @@ import { ValidationPipe } from "@nestjs/common";
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Enable CORS so the Next.js frontend can communicate with NestJS
+  // Enable CORS so the site (login.html and admin.html on any dev port) can communicate with NestJS
   app.enableCors({
-    origin: process.env.APP_URL || "http://localhost:3000",
+    origin: (origin, callback) => {
+      if (!origin || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:') || origin === process.env.APP_URL) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    },
     credentials: true
   });
 

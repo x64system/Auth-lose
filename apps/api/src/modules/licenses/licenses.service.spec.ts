@@ -40,8 +40,12 @@ describe("LicensesService", () => {
       prismaMock.license.findMany.mockResolvedValue(mock);
 
       const result = await service.findAll();
+      // user nunca deve ser incluído por completo (evita vazar passwordHash /
+      // twoFactorSecret) — só um select seguro de campos públicos.
       expect(prismaMock.license.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ include: { product: true, user: true } })
+        expect.objectContaining({
+          include: { product: true, user: { select: { id: true, name: true, email: true, role: true } } }
+        })
       );
       expect(result).toEqual(mock);
     });

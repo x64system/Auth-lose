@@ -1,0 +1,211 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleName {
+  SUPER_ADMIN
+  ADMIN
+  MODERATOR
+  SUPPORT
+  DEVELOPER
+  CUSTOMER
+  USER
+}
+
+enum LicenseStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+  REVOKED
+}
+
+model User {
+  id           String      @id @default(cuid())
+  name         String
+  email        String      @unique
+  passwordHash String
+  role         RoleName    @default(USER)
+  isBanned     Boolean     @default(false)
+  hwid         String?
+  verifiedAt   DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  licenses     License[]
+  sessions     Session[]
+  logs         Log[]
+  notifications Notification[]
+  orders       Order[]
+  apiKeys      ApiKey[]
+  subscriptions Subscription[]
+  twoFactorEnabled Boolean   @default(false)
+  twoFactorSecret  String?
+  avatarUrl        String?
+  locale           String    @default("pt-PT")
+  theme            String    @default("dark")
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  name        String
+  description String
+  version     String
+  category    String
+  status      String
+  downloads   Int       @default(0)
+  updates     Int       @default(0)
+  createdAt   DateTime  @default(now())
+  imageUrl     String?
+  price        Decimal?    @db.Decimal(10, 2)
+  licenses    License[]
+  orders      Order[]
+  downloadsRel Download[]
+}
+
+model License {
+  id           String        @id @default(cuid())
+  code         String        @unique
+  type         String
+  status       LicenseStatus @default(INACTIVE)
+  createdAt    DateTime      @default(now())
+  activatedAt  DateTime?
+  expiresAt    DateTime?
+  device       String?
+  usageHistory Json?
+  userId       String?
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  productId    String
+  product      Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  ipAddress String?
+  userAgent String?
+}
+
+model Log {
+  id        String   @id @default(cuid())
+  action    String
+  message   String
+  ip        String?
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+}
+
+model Permission {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  label     String
+  createdAt DateTime @default(now())
+  roleLinks RolePermission[]
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  role         RoleName
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([role, permissionId])
+}
+
+model Order {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  total      Decimal  @db.Decimal(10, 2)
+  status     String
+  createdAt  DateTime @default(now())
+  payments   Payment[]
+}
+
+model Payment {
+  id           String   @id @default(cuid())
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  gateway       String
+  amount        Decimal  @db.Decimal(10, 2)
+  currency      String   @default("USD")
+  status        String
+  transactionId String?
+  createdAt     DateTime @default(now())
+}
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  name      String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model Coupon {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  discount   Int
+  active     Boolean  @default(true)
+  expiresAt  DateTime?
+  createdAt  DateTime @default(now())
+}
+
+model Plan {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  price         Decimal  @db.Decimal(10, 2)
+  billingPeriod String
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId    String
+  plan      Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  status    String
+  startedAt DateTime @default(now())
+  endsAt    DateTime?
+}
+
+model Download {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId     String?
+  createdAt  DateTime @default(now())
+  ipAddress  String?
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}

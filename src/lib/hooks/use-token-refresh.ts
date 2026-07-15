@@ -14,27 +14,45 @@ import { useEffect, useRef } from "react";
  */
 export function useTokenRefresh(intervalMs = 30 * 60 * 1000) {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isRefreshingRef = useRef(false);
 
   async function refresh() {
+    // BUG FIX: Prevenir múltiplas chamadas simultâneas
+    if (isRefreshingRef.current) {
+      return;
+    }
+
+    isRefreshingRef.current = true;
+
     try {
-      const res = await fetch("/api/auth/refresh", { method: "POST" });
+      const res = await fetch("/api/auth/refresh", { 
+        method: "POST",
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
       if (!res.ok) {
         // Token expirado ou conta suspensa → redireciona para login
+        console.warn('[Token Refresh] Failed, redirecting to login');
         window.location.href = "/login";
       }
-    } catch {
+    } catch (err) {
       // Falha de rede — ignora silenciosamente, tentará na próxima iteração
+      console.warn('[Token Refresh] Network error, will retry later', err);
+    } finally {
+      isRefreshingRef.current = false;
     }
   }
 
   useEffect(() => {
-    // Dispara imediatamente ao montar para validar a sessão
-    refresh();
-
+    // BUG FIX: NÃO dispara imediatamente - deixa o usuário logar primeiro
+    // Apenas agenda o próximo refresh
     timerRef.current = setInterval(refresh, intervalMs);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [intervalMs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // BUG FIX: Array vazio para não recriar o interval
 }

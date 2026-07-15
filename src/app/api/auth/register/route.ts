@@ -15,6 +15,10 @@ export async function POST(req: Request) {
   const parsed = registerSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
+  // BUG FIX #12: Rate limit também por email para prevenir spam de múltiplas contas
+  const emailLimited = rateLimit(`register:${parsed.data.email}`, 3, 60_000);
+  if (emailLimited) return emailLimited;
+
   const exists = await db.user.findUnique({ where: { email: parsed.data.email } });
   if (exists) return NextResponse.json({ error: "Email already in use" }, { status: 409 });
 

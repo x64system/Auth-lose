@@ -6,7 +6,7 @@ import { ROLES_KEY, AppRole } from "./roles.decorator";
  * Hierarquia de cargos: índice maior = mais permissões.
  * SUPER_ADMIN pode fazer tudo que cargos abaixo podem.
  */
-const ROLE_HIERARCHY: AppRole[] = [
+export const ROLE_HIERARCHY: AppRole[] = [
   "USER",
   "CUSTOMER",
   "SUPPORT",
@@ -16,7 +16,7 @@ const ROLE_HIERARCHY: AppRole[] = [
   "SUPER_ADMIN"
 ];
 
-function getRoleLevel(role: string): number {
+export function getRoleLevel(role: string): number {
   const idx = ROLE_HIERARCHY.indexOf(role as AppRole);
   return idx === -1 ? -1 : idx;
 }
