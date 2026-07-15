@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   if (limited) return limited;
 
   const body = await req.json().catch(() => null);
-  const code = typeof body?.code === "string" ? body.code : "";
+  const code = (typeof body?.code === "string" ? body.code : (typeof body?.key === "string" ? body.key : "")).trim();
   const device = typeof body?.device === "string" ? body.device : undefined;
   if (!code) return NextResponse.json({ valid: false, reason: "Missing code" }, { status: 400 });
 
