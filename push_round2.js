@@ -19,12 +19,12 @@ function push(cwd, msg) {
 
 push(
   'C:\\Users\\lose\\Downloads\\auth',
-  'Security fix: lock debug-db endpoint + SameSite=strict cookie (Bug Bounty 2026-07-15)'
+  'Security fix: patch CRIT-04, CRIT-05, HIGH-04, HIGH-05, HIGH-06, MED-04 (Bug Bounty Round 2)'
 );
 
 push(
   'C:\\Users\\lose\\Downloads\\game-sec.dev',
-  'Security fix: patch CRIT-02 CRIT-03 MED-02 in auth-check.js (Bug Bounty 2026-07-15)'
+  'Security fix: patch HIGH-03 DOM XSS (Bug Bounty Round 2)'
 );
 
 console.log('All done!');

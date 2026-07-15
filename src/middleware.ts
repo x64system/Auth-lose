@@ -57,7 +57,7 @@ function withCsrfCookie(req: NextRequest, res: NextResponse) {
   if (!req.cookies.get(CSRF_COOKIE)) {
     res.cookies.set(CSRF_COOKIE, crypto.randomUUID(), {
       httpOnly: false,
-      sameSite: "lax",
+      sameSite: "strict", // FIX MED-04: strict evita envio em navega\u00e7\u00f5es cross-site
       secure: process.env.NODE_ENV === "production",
       path: "/"
     });

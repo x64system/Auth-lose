@@ -4,9 +4,11 @@ import { db } from "@/lib/prisma";
 import { issueSession, verifyPassword, createPendingTwoFactorToken } from "@/lib/auth";
 import { loginSchema } from "@/lib/validators";
 import { rateLimit, validateCsrf } from "@/lib/security/guards";
+import { getClientIp } from "@/lib/security/ip";
 
 export async function POST(req: Request) {
-  const ip = req.headers.get("x-forwarded-for") ?? "unknown";
+  // FIX CRIT-05: usar getClientIp() em vez de x-forwarded-for direto (evita IP spoofing)
+  const ip = getClientIp(req);
   const limited = rateLimit(`login:${ip}`, 10, 60_000);
   if (limited) return limited;
   const csrfError = validateCsrf(req);

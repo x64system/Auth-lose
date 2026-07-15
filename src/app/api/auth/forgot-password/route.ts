@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/prisma";
 import { rateLimit } from "@/lib/security/guards";
+import { getClientIp } from "@/lib/security/ip";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const ip = req.headers.get("x-forwarded-for") ?? "unknown";
+  const ip = getClientIp(req); // FIX CRIT-05
   const limited = rateLimit(`forgot:${ip}`, 5, 60_000);
   if (limited) return limited;
 
@@ -19,10 +20,17 @@ export async function POST(req: Request) {
   const user = await db.user.findUnique({ where: { email } });
   if (user) {
     await db.log.create({
-      data: { action: "PASSWORD_RESET_REQUEST", message: "Password reset requested", userId: user.id }
+      data: { action: "PASSWORD_RESET_REQUEST", message: "Password reset requested (email not sent - not implemented)", userId: user.id }
     });
   }
 
-  // Não revelamos se o email existe (evita enumeração de utilizadores).
-  return NextResponse.json({ ok: true, message: "Se o email existir, enviámos um link de recuperação." });
+  // FIX HIGH-06: Não fingir que o email foi enviado quando não foi implementado.
+  // Retornar 501 é honesto e evita que o utilizador fique bloqueado para sempre
+  // sem saber que o sistema não funciona.
+  // TODO: Implementar envio de email (ex: Resend, SendGrid, Nodemailer)
+  return NextResponse.json({
+    ok: false,
+    message: "Recuperação de palavra-passe ainda não está disponível. Contacte o suporte.",
+    code: "NOT_IMPLEMENTED"
+  }, { status: 501 });
 }

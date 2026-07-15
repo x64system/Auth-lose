@@ -3,9 +3,10 @@ import { db } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 import { registerSchema } from "@/lib/validators";
 import { rateLimit, validateCsrf } from "@/lib/security/guards";
+import { getClientIp } from "@/lib/security/ip";
 
 export async function POST(req: Request) {
-  const ip = req.headers.get("x-forwarded-for") ?? "unknown";
+  const ip = getClientIp(req); // FIX CRIT-05
   const limited = rateLimit(`register:${ip}`, 8, 60_000);
   if (limited) return limited;
   const csrfError = validateCsrf(req);
