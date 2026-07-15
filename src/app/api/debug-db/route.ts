@@ -1,27 +1,21 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/prisma";
+import { requireRole } from "@/lib/security/guards";
 
+/**
+ * GET /api/debug-db
+ *
+ * Endpoint removido por razões de segurança.
+ * Expunha todos os códigos de licença e informações da base de dados
+ * sem autenticação (CRIT-01 — Bug Bounty 2026-07-15).
+ */
 export async function GET() {
-  try {
-    const rawUrl = process.env.DATABASE_URL || "not-defined";
-    const sanitizedUrl = rawUrl.replace(/:([^:@]+)@/, ":***@");
+  const auth = await requireRole("SUPER_ADMIN");
+  if (auth.response) return auth.response;
 
-    const licenses = await db.license.findMany({
-      select: { code: true, status: true }
-    });
-
-    const usersCount = await db.user.count();
-
-    return NextResponse.json({
-      databaseUrl: sanitizedUrl,
-      licensesCount: licenses.length,
-      licenses: licenses,
-      usersCount: usersCount
-    });
-  } catch (err: any) {
-    return NextResponse.json({
-      error: err.message || "Unknown error",
-      stack: err.stack
-    }, { status: 500 });
-  }
+  // Endpoint desativado em produção — retorna 410 Gone
+  return NextResponse.json(
+    { error: "Este endpoint foi desativado por razões de segurança." },
+    { status: 410 }
+  );
 }
+

@@ -60,7 +60,7 @@ export async function issueSession(
 
   cookies().set(cookieName, token, {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge
