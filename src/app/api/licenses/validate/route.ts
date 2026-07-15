@@ -67,3 +67,7 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ valid: true, license: updated });
 }
+
+export async function OPTIONS() {
+  return NextResponse.json({}, { status: 200 });
+}
